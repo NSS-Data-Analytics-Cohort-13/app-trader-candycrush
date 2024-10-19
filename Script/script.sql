@@ -55,4 +55,19 @@ ORDER BY total_review DESC
 LIMIT 10;
 
 
+--the top-10 with lifespan. The lifespan code is bolded.
+SELECT DISTINCT(a.name),
+	SUM(CAST(a.review_count AS INTEGER) + p.review_count) AS total_review,
+	ROUND(AVG(a.rating + p.rating)/2,2) AS avg_rating,
+	(1 + 2 * ROUND(AVG(a.rating + p.rating)/2,2)) AS year_lifespan,
+	CASE WHEN a.price >= CAST(REPLACE(p.price,'$','') AS DECIMAL) THEN a.price
+	ELSE CAST(REPLACE(p.price,'$','') AS DECIMAL) END AS high_price
+FROM app_store_apps AS a
+INNER JOIN play_store_apps AS p
+ON a.name = p.name
+GROUP BY a.name, a.price, p.price
+ORDER BY total_review DESC
+LIMIT 10;
+
+
 
