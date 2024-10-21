@@ -16,25 +16,27 @@ ROUND((((ROUND(ROUND(ROUND(AVG(a.rating + p.rating)/2,2)*2,0)/2,1))*2)+1),0) AS 
 FROM app_store_apps AS a
 INNER JOIN play_store_apps AS p
 ON a.name = p.name
-GROUP By a.name, a.primary_genre, high_price
+GROUP By a.name, a.primary_genre, high_price;
 
---Query to cretae top 10 recommended apps based on overall_profit
+--Query to create top 10 recommended apps based on overall_profit
+/* Profit is calculated based on assumptions 10000 profit per month i.e. 120000 per year times lifespan, minus one time purchase value of high price times 10000, if the price is less than 0.99 then purchase price will be 10000 AND addition to that 1000 per month marketing value i.e. 12000 per year marketing price times lifespan*/
 SELECT name, genres, high_price, total_review, 
-/* Profit is calculated based on assumptions 10000 profit per month times lifespan */
 (120000*(lifespan))-
-(case when high_price > 0.99 then high_price*10000 else 10000 end + (12000*lifespan))  AS overall_profit, avg_rating
+(CASE WHEN high_price > 0.99 THEN high_price*10000 ELSE 10000 END + (12000*lifespan))  AS overall_profit, avg_rating
 FROM common_apps
-ORDER BY overall_profit DESC, total_review DESC limit 10
+ORDER BY overall_profit DESC, total_review DESC 
+LIMIT 10;
 
 --Query to cretae top 10 recommended apps based on review count as popularity parameter
 SELECT name, genres, high_price, total_review, 
-/* Profit is calculated based on assumptions 10000 profit per month times lifespan */
+/* Profit is calculated based on various assumptions as mentioned above */
 (120000*(lifespan))-
 (case when high_price > 0.99 then high_price*10000 else 10000 end + (12000*lifespan))  AS overall_profit, avg_rating
 FROM common_apps
-ORDER BY total_review DESC limit 10
+ORDER BY total_review DESC 
+LIMIT 10;
 
---Query to find out top app names based on highest review count per genre
+--Query to find out top app names based on highest REVIEW COUNT per genre. If app trader wanted to invest in diffrent genre, below query is generating top review count app per genre based on highest review count.
 SELECT genres, NAME, max_review
 FROM( SELECT genres, 
        NAME, 
@@ -43,7 +45,22 @@ FROM( SELECT genres,
 FROM common_apps
 GROUP BY genres, NAME
  ) AS a
-WHERE rn = 1
+WHERE rn = 1;
+
+--Query to find out top app names based on highest OVERALL PROFIT per genre. If app trader wanted to invest in diffrent genre, below query is generating top app per genre based on highest overall profit in each category.
+SELECT genres, NAME, max_review, (120000*(lifespan))-
+(CASE WHEN high_price > 0.99 THEN high_price*10000 ELSE 10000 END + (12000*lifespan))  AS overall_profit
+FROM( SELECT genres, lifespan, high_price,
+       NAME, 
+       MAX(total_review) AS max_review, 
+       ROW_NUMBER() OVER(PARTITION BY genres 
+	   ORDER BY MAX((120000*(lifespan))-
+		(CASE WHEN high_price > 0.99 THEN high_price*10000 ELSE 10000 END + (12000*lifespan))) DESC
+	   ) AS rn
+FROM common_apps
+GROUP BY genres,lifespan, NAME, high_price
+ ) AS a
+WHERE rn = 1;
 
 --Query to cretae top 10 recommended apps based on size of an app in gigabytes
 SELECT DISTINCT(a.name),
